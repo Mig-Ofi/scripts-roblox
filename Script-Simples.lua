@@ -1,23 +1,17 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 local player = Players.LocalPlayer
-
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local hrp = character:WaitForChild("HumanoidRootPart")
-
-local flying = false
-local flySpeed = 50
-local BodyGyro, BodyVelocity
-local flyConnection
-local goingUp = false
-local goingDown = false
 
 -- Criar GUI
 local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 ScreenGui.Name = "SpeedJumpFlyGUI"
 ScreenGui.ResetOnSpawn = false
 
+-- Frame principal (inicialmente escondido)
 local Frame = Instance.new("Frame", ScreenGui)
 Frame.Size = UDim2.new(0, 250, 0, 260)
 Frame.Position = UDim2.new(0.5, -125, 0.5, -130)
@@ -25,6 +19,7 @@ Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.BorderSizePixel = 0
 Frame.Visible = false
 
+-- Função para criar TextBox
 local function createTextBox(placeholder, posY)
     local box = Instance.new("TextBox", Frame)
     box.PlaceholderText = placeholder
@@ -39,10 +34,12 @@ local function createTextBox(placeholder, posY)
     return box
 end
 
+-- Inputs
 local SpeedBox = createTextBox("WalkSpeed (ex: 1000)", 10)
 local JumpBox = createTextBox("JumpPower (ex: 500)", 50)
 local FlySpeedBox = createTextBox("Fly Speed (ex: 50)", 90)
 
+-- Botão aplicar Speed/Jump
 local ApplyBtn = Instance.new("TextButton", Frame)
 ApplyBtn.Text = "Aplicar Speed/Jump"
 ApplyBtn.Size = UDim2.new(0, 230, 0, 30)
@@ -51,6 +48,7 @@ ApplyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
 ApplyBtn.TextColor3 = Color3.new(1, 1, 1)
 ApplyBtn.TextScaled = true
 
+-- Botão fly ativar/desativar
 local FlyBtn = Instance.new("TextButton", Frame)
 FlyBtn.Text = "Ativar Fly"
 FlyBtn.Size = UDim2.new(0, 230, 0, 30)
@@ -59,6 +57,7 @@ FlyBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
 FlyBtn.TextColor3 = Color3.new(1, 1, 1)
 FlyBtn.TextScaled = true
 
+-- Botão arrastável para abrir/fechar
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
 ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBtn.Position = UDim2.new(0, 10, 0.5, -25)
@@ -72,6 +71,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
     Frame.Visible = not Frame.Visible
 end)
 
+-- Botões subir e descer fly
 local UpBtn = Instance.new("TextButton", ScreenGui)
 UpBtn.Size = UDim2.new(0, 60, 0, 60)
 UpBtn.Position = UDim2.new(0, 10, 1, -130)
@@ -90,6 +90,15 @@ DownBtn.TextColor3 = Color3.new(1, 1, 1)
 DownBtn.Visible = false
 DownBtn.TextScaled = true
 
+-- Variáveis fly
+local flying = false
+local flySpeed = 50
+local BodyGyro, BodyVelocity
+local flyConnection
+local goingUp = false
+local goingDown = false
+
+-- Eventos toque subir/descer
 UpBtn.TouchStarted:Connect(function()
     goingUp = true
 end)
@@ -104,6 +113,7 @@ DownBtn.TouchEnded:Connect(function()
     goingDown = false
 end)
 
+-- Função iniciar fly
 local function startFly()
     humanoid.PlatformStand = true
 
@@ -130,6 +140,7 @@ local function startFly()
     end)
 end
 
+-- Função parar fly
 local function stopFly()
     humanoid.PlatformStand = false
     if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
@@ -137,6 +148,7 @@ local function stopFly()
     if flyConnection then flyConnection:Disconnect() flyConnection = nil end
 end
 
+-- Aplicar Speed e Jump
 ApplyBtn.MouseButton1Click:Connect(function()
     local speed = tonumber(SpeedBox.Text)
     local jump = tonumber(JumpBox.Text)
@@ -144,6 +156,7 @@ ApplyBtn.MouseButton1Click:Connect(function()
     if jump then humanoid.JumpPower = jump end
 end)
 
+-- Ativar/Desativar Fly
 FlyBtn.MouseButton1Click:Connect(function()
     local fspeed = tonumber(FlySpeedBox.Text)
     if fspeed and fspeed > 0 then flySpeed = fspeed end
