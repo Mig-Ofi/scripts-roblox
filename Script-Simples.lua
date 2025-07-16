@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
@@ -10,15 +11,15 @@ local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 ScreenGui.Name = "SpeedJumpFlyGUI"
 ScreenGui.ResetOnSpawn = false
 
--- Frame principal (escondido inicialmente)
+-- Frame principal (inicialmente escondido)
 local Frame = Instance.new("Frame", ScreenGui)
-Frame.Size = UDim2.new(0, 250, 0, 220)
-Frame.Position = UDim2.new(0.5, -125, 0.5, -110)
+Frame.Size = UDim2.new(0, 250, 0, 260)
+Frame.Position = UDim2.new(0.5, -125, 0.5, -130)
 Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.BorderSizePixel = 0
 Frame.Visible = false
 
--- Inputs
+-- Função para criar TextBox
 local function createTextBox(placeholder, posY)
     local box = Instance.new("TextBox", Frame)
     box.PlaceholderText = placeholder
@@ -28,29 +29,35 @@ local function createTextBox(placeholder, posY)
     box.TextColor3 = Color3.new(1, 1, 1)
     box.ClearTextOnFocus = false
     box.Text = ""
+    box.TextScaled = true
+    box.TextWrapped = true
     return box
 end
 
+-- Inputs
 local SpeedBox = createTextBox("WalkSpeed (ex: 1000)", 10)
 local JumpBox = createTextBox("JumpPower (ex: 500)", 50)
-local FlySpeedBox = createTextBox("Fly Speed (ex: 10)", 90)
+local FlySpeedBox = createTextBox("Fly Speed (ex: 50)", 90)
 
--- Botões
+-- Botão aplicar Speed/Jump
 local ApplyBtn = Instance.new("TextButton", Frame)
 ApplyBtn.Text = "Aplicar Speed/Jump"
 ApplyBtn.Size = UDim2.new(0, 230, 0, 30)
 ApplyBtn.Position = UDim2.new(0, 10, 0, 130)
 ApplyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
 ApplyBtn.TextColor3 = Color3.new(1, 1, 1)
+ApplyBtn.TextScaled = true
 
+-- Botão fly ativar/desativar
 local FlyBtn = Instance.new("TextButton", Frame)
 FlyBtn.Text = "Ativar Fly"
 FlyBtn.Size = UDim2.new(0, 230, 0, 30)
 FlyBtn.Position = UDim2.new(0, 10, 0, 170)
 FlyBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
 FlyBtn.TextColor3 = Color3.new(1, 1, 1)
+FlyBtn.TextScaled = true
 
--- Botão toggle arrastável
+-- Botão arrastável para abrir/fechar
 local ToggleBtn = Instance.new("TextButton", ScreenGui)
 ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
 ToggleBtn.Position = UDim2.new(0, 10, 0.5, -25)
@@ -64,19 +71,7 @@ ToggleBtn.MouseButton1Click:Connect(function()
     Frame.Visible = not Frame.Visible
 end)
 
--- Função aplicar Speed e Jump
-ApplyBtn.MouseButton1Click:Connect(function()
-    local speed = tonumber(SpeedBox.Text)
-    local jump = tonumber(JumpBox.Text)
-    if speed then
-        humanoid.WalkSpeed = speed
-    end
-    if jump then
-        humanoid.JumpPower = jump
-    end
-end)
-
--- Botões para subir/descer no fly
+-- Botões subir e descer fly
 local UpBtn = Instance.new("TextButton", ScreenGui)
 UpBtn.Size = UDim2.new(0, 60, 0, 60)
 UpBtn.Position = UDim2.new(0, 10, 1, -130)
@@ -84,6 +79,7 @@ UpBtn.Text = "↑"
 UpBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 UpBtn.TextColor3 = Color3.new(1, 1, 1)
 UpBtn.Visible = false
+UpBtn.TextScaled = true
 
 local DownBtn = Instance.new("TextButton", ScreenGui)
 DownBtn.Size = UDim2.new(0, 60, 0, 60)
@@ -92,14 +88,17 @@ DownBtn.Text = "↓"
 DownBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 DownBtn.TextColor3 = Color3.new(1, 1, 1)
 DownBtn.Visible = false
+DownBtn.TextScaled = true
 
+-- Variáveis fly
 local flying = false
-local flySpeed = 10
+local flySpeed = 50
 local BodyGyro, BodyVelocity
+local flyConnection
 local goingUp = false
 local goingDown = false
 
--- Eventos toque para os botões up/down
+-- Eventos toque subir/descer
 UpBtn.TouchStarted:Connect(function()
     goingUp = true
 end)
@@ -115,36 +114,49 @@ DownBtn.TouchEnded:Connect(function()
 end)
 
 -- Função iniciar fly
-local flyConnection
 local function startFly()
-    BodyGyro = Instance.new("BodyGyro", hrp)
+    humanoid.PlatformStand = true
+
+    BodyGyro = Instance.new("BodyGyro")
     BodyGyro.P = 9e4
     BodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
     BodyGyro.CFrame = hrp.CFrame
+    BodyGyro.Parent = hrp
 
-    BodyVelocity = Instance.new("BodyVelocity", hrp)
+    BodyVelocity = Instance.new("BodyVelocity")
     BodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
     BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    BodyVelocity.Parent = hrp
 
-    flyConnection = RunService.RenderStepped:Connect(function()
-        if flying then
-            local cam = workspace.CurrentCamera
-            local moveVec = cam.CFrame.LookVector
-            local vertical = 0
-            if goingUp then vertical = 1 elseif goingDown then vertical = -1 end
-            local velocity = (moveVec * flySpeed) + Vector3.new(0, vertical * flySpeed, 0)
-            BodyVelocity.Velocity = velocity
-            BodyGyro.CFrame = cam.CFrame
-        end
+    flyConnection = RunService.Heartbeat:Connect(function()
+        if not flying then return end
+        local cam = workspace.CurrentCamera
+        local moveVec = cam.CFrame.LookVector
+        local vertical = 0
+        if goingUp then vertical = 1 elseif goingDown then vertical = -1 end
+        local velocity = (moveVec * flySpeed) + Vector3.new(0, vertical * flySpeed, 0)
+        BodyVelocity.Velocity = velocity
+        BodyGyro.CFrame = cam.CFrame
     end)
 end
 
+-- Função parar fly
 local function stopFly()
+    humanoid.PlatformStand = false
     if BodyGyro then BodyGyro:Destroy() BodyGyro = nil end
     if BodyVelocity then BodyVelocity:Destroy() BodyVelocity = nil end
     if flyConnection then flyConnection:Disconnect() flyConnection = nil end
 end
 
+-- Aplicar Speed e Jump
+ApplyBtn.MouseButton1Click:Connect(function()
+    local speed = tonumber(SpeedBox.Text)
+    local jump = tonumber(JumpBox.Text)
+    if speed then humanoid.WalkSpeed = speed end
+    if jump then humanoid.JumpPower = jump end
+end)
+
+-- Ativar/Desativar Fly
 FlyBtn.MouseButton1Click:Connect(function()
     local fspeed = tonumber(FlySpeedBox.Text)
     if fspeed and fspeed > 0 then flySpeed = fspeed end
