@@ -1,5 +1,3 @@
---[[ GUI de Speed, Jump e Fly com botões, fly customizável e sem limite ]]--
-
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
